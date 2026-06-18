@@ -19,6 +19,7 @@ const emailService = require('../services/email.service')
  */
 
 async function createTransaction(req,res){
+    
     const {fromAccount,toAccount,amount,idempotencyKey} = req.body;
 
     
