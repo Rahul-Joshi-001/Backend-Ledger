@@ -26,11 +26,11 @@ const Register = () => {
 
         try {
             const res = await registerUser(formData);
-
+            localStorage.setItem("token", res.data.token);
             setMessage("Registration Successful!");
             setMessageType("success");
             setTimeout(() => {
-                navigate("/home");
+                navigate("/create-account");
             }, 1000);
         } catch (error) {
             setMessage(
