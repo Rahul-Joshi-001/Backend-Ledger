@@ -27,6 +27,7 @@ const Login = () => {
             const res = await loginUser(formData);
 
             localStorage.setItem("token", res.data.token);
+            localStorage.setItem("user", JSON.stringify(res.data.user));
 
             setMessage("Login Successful!");
             setMessageType("success");
@@ -56,8 +57,8 @@ const Login = () => {
                 {message && (
                     <div
                         className={`mb-4 p-3 rounded-xl text-center font-medium ${messageType === "success"
-                                ? "bg-green-100 text-green-700 border border-green-300"
-                                : "bg-red-100 text-red-700 border border-red-300"
+                            ? "bg-green-100 text-green-700 border border-green-300"
+                            : "bg-red-100 text-red-700 border border-red-300"
                             }`}
                     >
                         {message}

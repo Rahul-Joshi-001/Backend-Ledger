@@ -25,27 +25,51 @@ async function createTransaction(req, res) {
 
     // VALIDATE REQUEST
 
-    const { fromAccount, toAccount, amount, idempotencyKey } = req.body;
+    const { fromAccount, email, amount, idempotencyKey } = req.body;
 
-    if (!fromAccount || !toAccount || !amount || !idempotencyKey) {
+    if (!fromAccount || !email || !amount || !idempotencyKey) {
         return res.status(400).json({
-            message: "FromAccount , toAccount , amount , idempotencyKey is required"
+            message: "fromAccount, email, amount and idempotencyKey are required"
         })
     }
 
     const fromUserAccount = await accountModel.findOne({
         _id: fromAccount,
-    })
-    const toUserAccount = await accountModel.findOne({
-        _id: toAccount,
+        user: req.user._id
     })
 
-    if (!fromUserAccount || !toUserAccount) {
+    const receiverUser = await userModel.findOne({
+        email
+    });
+
+    if (!receiverUser) {
+        return res.status(404).json({
+            message: "User not found"
+        });
+    }
+
+    if (req.user.email === email) {
         return res.status(400).json({
-            message: "Invalid fromAccount or toAccount",
+            message: "You cannot transfer money to yourself"
+        });
+    }
+
+    const toUserAccount = await accountModel.findOne({
+        user: receiverUser._id
+    });
+
+
+    if (!fromUserAccount) {
+        return res.status(400).json({
+            message: "Invalid sender account"
         })
     }
 
+    if (!toUserAccount) {
+        return res.status(400).json({
+            message: "Receiver account not found"
+        })
+    }
     // VALIDATE IDEMPOTENCY KEY
 
     const isTransactionAlreadyExist = await transactionModel.findOne({
@@ -96,14 +120,15 @@ async function createTransaction(req, res) {
 
     // CREATE TRANSACTION PENDING
     let transaction
+    let session
     try {
 
-        const session = await mongoose.startSession()
+        session = await mongoose.startSession()
         session.startTransaction()
 
         transaction = (await transactionModel.create([{
             fromAccount,
-            toAccount,
+            toAccount: toUserAccount._id,
             amount,
             idempotencyKey,
             status: "PENDING"
@@ -117,7 +142,7 @@ async function createTransaction(req, res) {
         }], { session })
 
         const CreditLedgerEntry = await ledgerModel.create([{
-            account: toAccount,
+            account: toUserAccount._id,
             amount: amount,
             transaction: transaction._id,
             type: "CREDIT"
@@ -135,14 +160,26 @@ async function createTransaction(req, res) {
         session.endSession()
     }
     catch (error) {
-        return res.status(400).json({
-            message: "Transaction is pending due to some issues",
-        })
+
+        if (session) {
+            await session.abortTransaction();
+            session.endSession();
+        }
+
+        return res.status(500).json({
+            message: "Transaction failed",
+            error: error.message
+        });
     }
 
     // SENDING MAIL 
 
-    await emailService.sendTransaction(req.user.email, req.user.name, amount, toAccount)
+    await emailService.sendTransaction(
+        req.user.email,
+        req.user.name,
+        amount,
+        email
+    )
 
     return res.status(200).json({
         message: "Transaction is Completed",
@@ -186,14 +223,6 @@ async function creatInitialFundsTransaction(req, res) {
     if (!fromUserAccount) {
         return res.status(400).json({
             message: "System account not found"
-        })
-    }
-
-    const systemBalance = await fromUserAccount.getBalance()
-
-    if (systemBalance < amount) {
-        return res.status(400).json({
-            message: "System account has insufficient funds"
         })
     }
 
