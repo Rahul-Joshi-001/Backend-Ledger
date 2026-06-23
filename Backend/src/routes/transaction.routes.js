@@ -7,4 +7,6 @@ transactionRoutes.post('/',authmiddleware.authMiddleware,transactionController.c
 
 transactionRoutes.post('/system/initial-fund',authmiddleware.authMiddleware,transactionController.creatInitialFundsTransaction)
 
+transactionRoutes.get("/recent-transactions",authmiddleware.authMiddleware,transactionController.getRecentTransaction)
+
 module.exports = transactionRoutes;

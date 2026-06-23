@@ -285,4 +285,70 @@ async function creatInitialFundsTransaction(req, res) {
     }
 }
 
-module.exports = { createTransaction, creatInitialFundsTransaction }
+async function getRecentTransaction(req, res) {
+
+    const account = await accountModel.findOne({
+        user: req.user._id
+    });
+
+    if (!account) {
+        return res.status(404).json({
+            message: "Account not found"
+        });
+    }
+
+    const transactions = await transactionModel.find({
+        $or: [
+            { fromAccount: account._id },
+            { toAccount: account._id }
+        ]
+    })
+    .populate({
+        path: "fromAccount",
+        populate: {
+            path: "user",
+            select: "name email"
+        }
+    })
+    .populate({
+        path: "toAccount",
+        populate: {
+            path: "user",
+            select: "name email"
+        }
+    })
+    .sort({ createdAt: -1 })
+    .limit(4);
+
+    const formattedTransactions = transactions.map((transaction) => {
+
+        const isDebit =
+            transaction.fromAccount._id.toString() === account._id.toString();
+
+        return {
+            transactionId: transaction._id,
+            amount: transaction.amount,
+            status: transaction.status,
+            createdAt: transaction.createdAt,
+
+            type: isDebit ? "DEBIT" : "CREDIT",
+
+            from: {
+                name: transaction.fromAccount.user.name,
+                email: transaction.fromAccount.user.email
+            },
+
+            to: {
+                name: transaction.toAccount.user.name,
+                email: transaction.toAccount.user.email
+            }
+        };
+    });
+
+    return res.status(200).json({
+        message: "Recent transactions fetched successfully",
+        transactions: formattedTransactions
+    });
+}
+
+module.exports = { createTransaction, creatInitialFundsTransaction , getRecentTransaction }

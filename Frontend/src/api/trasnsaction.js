@@ -1,4 +1,3 @@
-
 // src/api/transaction.js
 
 import API from "./axios";
@@ -9,4 +8,8 @@ export const createTransaction = (data) => {
 
 export const createInitialFund = (data) => {
   return API.post("/api/transactions/system/initial-fund", data);
+};
+
+export const getRecentTransactions = () => {
+  return API.get("/api/transactions/recent-transactions");
 };
