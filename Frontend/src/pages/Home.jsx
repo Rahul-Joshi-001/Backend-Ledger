@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getUserAccounts, getAccountBalance } from "../api/account";
-import { createTransaction } from "../api/trasnsaction";
+import { createTransaction, getRecentTransactions } from "../api/trasnsaction";
 import { logoutUser } from "../api/auth";
 
 const Home = () => {
@@ -21,6 +21,7 @@ const Home = () => {
     const [isError, setIsError] = useState(false);
 
     const [sending, setSending] = useState(false);
+    const [transactions, setTransactions] = useState([]);
 
     useEffect(() => {
         fetchData();
@@ -37,6 +38,10 @@ const Home = () => {
             const balanceRes = await getAccountBalance(userAccount._id);
 
             setBalance(balanceRes.data.balance);
+
+            const transactionRes = await getRecentTransactions();
+
+            setTransactions(transactionRes.data.transactions);
         } catch (error) {
             console.log(error);
             setIsError(true);
@@ -244,8 +249,8 @@ const Home = () => {
                                 type="submit"
                                 disabled={sending}
                                 className={`w-full py-4 rounded-2xl font-semibold text-lg transition ${sending
-                                        ? "bg-gray-400 cursor-not-allowed"
-                                        : "bg-indigo-600 hover:bg-indigo-700 text-white"
+                                    ? "bg-gray-400 cursor-not-allowed"
+                                    : "bg-indigo-600 hover:bg-indigo-700 text-white"
                                     }`}
                             >
                                 {sending ? "Sending..." : "Send Money"}
@@ -258,17 +263,76 @@ const Home = () => {
                             Recent Transactions
                         </h2>
 
-                        <div className="flex items-center justify-center h-72 border-2 border-dashed border-gray-300 rounded-2xl">
-                            <div className="text-center">
-                                <p className="text-lg font-semibold text-gray-600">
-                                    No Transactions Yet
-                                </p>
+                        {transactions.length === 0 ? (
+                            <div className="flex items-center justify-center h-72 border-2 border-dashed border-gray-300 rounded-2xl">
+                                <div className="text-center">
+                                    <p className="text-lg font-semibold text-gray-600">
+                                        No Transactions Yet
+                                    </p>
 
-                                <p className="text-sm text-gray-400 mt-2">
-                                    Recent transfers will appear here.
-                                </p>
+                                    <p className="text-sm text-gray-400 mt-2">
+                                        Recent transfers will appear here.
+                                    </p>
+                                </div>
                             </div>
-                        </div>
+                        ) : (
+                            <div className="space-y-4 max-h-96 overflow-y-auto">
+                                {transactions.map((transaction) => (
+                                    <div
+                                        key={transaction.transactionId}
+                                        className={`rounded-2xl p-4 border ${transaction.type === "CREDIT"
+                                                ? "bg-green-50 border-green-200"
+                                                : "bg-red-50 border-red-200"
+                                            }`}
+                                    >
+                                        <div className="flex justify-between items-center">
+                                            <span
+                                                className={`font-bold ${transaction.type === "CREDIT"
+                                                        ? "text-green-600"
+                                                        : "text-red-600"
+                                                    }`}
+                                            >
+                                                {transaction.type}
+                                            </span>
+
+                                            <span className="font-semibold">
+                                                ₹{transaction.amount}
+                                            </span>
+                                        </div>
+
+                                        <div className="mt-3 text-sm">
+                                            <p>
+                                                <strong>From:</strong>{" "}
+                                                {transaction.from.name}
+                                            </p>
+
+                                            <p className="text-gray-600">
+                                                {transaction.from.email}
+                                            </p>
+
+                                            <p className="mt-2">
+                                                <strong>To:</strong>{" "}
+                                                {transaction.to.name}
+                                            </p>
+
+                                            <p className="text-gray-600">
+                                                {transaction.to.email}
+                                            </p>
+                                        </div>
+
+                                        <div className="mt-3 text-xs text-gray-500">
+                                            ID: {transaction.transactionId.slice(-8)}
+                                        </div>
+
+                                        <div className="text-xs text-gray-500 mt-1">
+                                            {new Date(
+                                                transaction.createdAt
+                                            ).toLocaleString()}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                 </div>
