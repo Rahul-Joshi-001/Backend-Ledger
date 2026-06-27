@@ -54,7 +54,7 @@ const TransactionCard = ({ transaction }) => {
             <p className="text-xs text-gray-400 mt-2">
                 Txn ID: {transaction.transactionId.slice(-8)}
             </p>
-
+            
         </div>
     );
 };
